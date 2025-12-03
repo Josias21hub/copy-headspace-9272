@@ -34,13 +34,60 @@ export default function ZenoraApp() {
   })
   const [userName, setUserName] = useState('')
   const [userEmail, setUserEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [supabaseConnected, setSupabaseConnected] = useState(false)
 
   useEffect(() => {
+    checkSupabaseConnection()
     loadPractices()
   }, [])
 
+  const checkSupabaseConnection = () => {
+    const hasUrl = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL
+    const hasKey = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    setSupabaseConnected(!!(hasUrl && hasKey))
+  }
+
   const loadPractices = async () => {
+    if (!supabaseConnected) {
+      // Práticas de exemplo quando Supabase não está conectado
+      setPractices([
+        {
+          id: '1',
+          title: 'Respiração Consciente',
+          description: 'Uma prática simples de respiração para acalmar a mente',
+          duration: 5,
+          category: 'breathing',
+          difficulty: 'beginner',
+          premium: false,
+          image_url: null
+        },
+        {
+          id: '2',
+          title: 'Meditação Guiada',
+          description: 'Meditação para iniciantes com foco na atenção plena',
+          duration: 10,
+          category: 'meditation',
+          difficulty: 'beginner',
+          premium: false,
+          image_url: null
+        },
+        {
+          id: '3',
+          title: 'Yoga Matinal',
+          description: 'Sequência de yoga para começar o dia com energia',
+          duration: 15,
+          category: 'movement',
+          difficulty: 'intermediate',
+          premium: true,
+          image_url: null
+        }
+      ])
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
     try {
       const { data, error } = await supabase
         .from('practices')
@@ -51,6 +98,19 @@ export default function ZenoraApp() {
       setPractices(data || [])
     } catch (error) {
       console.error('Erro ao carregar práticas:', error)
+      // Fallback para práticas de exemplo
+      setPractices([
+        {
+          id: '1',
+          title: 'Respiração Consciente',
+          description: 'Uma prática simples de respiração para acalmar a mente',
+          duration: 5,
+          category: 'breathing',
+          difficulty: 'beginner',
+          premium: false,
+          image_url: null
+        }
+      ])
     } finally {
       setIsLoading(false)
     }
@@ -59,6 +119,11 @@ export default function ZenoraApp() {
   const handleWelcomeSubmit = async () => {
     if (!userName || !userEmail) return
     
+    if (!supabaseConnected) {
+      setCurrentView('checkin')
+      return
+    }
+
     try {
       const { error } = await supabase
         .from('users')
@@ -68,10 +133,16 @@ export default function ZenoraApp() {
       setCurrentView('checkin')
     } catch (error) {
       console.error('Erro ao criar usuário:', error)
+      setCurrentView('checkin')
     }
   }
 
   const handleCheckInSubmit = async () => {
+    if (!supabaseConnected) {
+      setCurrentView('home')
+      return
+    }
+
     try {
       const { data: userData } = await supabase
         .from('users')
@@ -91,10 +162,16 @@ export default function ZenoraApp() {
       setCurrentView('home')
     } catch (error) {
       console.error('Erro ao salvar check-in:', error)
+      setCurrentView('home')
     }
   }
 
   const handlePracticeComplete = async (practiceId: string, duration: number) => {
+    if (!supabaseConnected) {
+      setCurrentView('home')
+      return
+    }
+
     try {
       const { data: userData } = await supabase
         .from('users')
@@ -115,6 +192,7 @@ export default function ZenoraApp() {
       setCurrentView('home')
     } catch (error) {
       console.error('Erro ao salvar progresso:', error)
+      setCurrentView('home')
     }
   }
 
