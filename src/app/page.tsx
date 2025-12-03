@@ -1,688 +1,664 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { Sparkles, Moon, Wind, Heart, Library, Crown, ChevronRight, Play, Lock, Globe, Dumbbell, Zap, Target, TrendingUp, Award, Calendar, Settings, BarChart3 } from 'lucide-react'
-import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+import { Sparkles, Heart, Moon, Wind, TrendingUp, Award, Lock } from 'lucide-react'
 
-export default function Zenora() {
-  const [currentScreen, setCurrentScreen] = useState<'welcome' | 'checkin' | 'home' | 'library' | 'premium' | 'workout'>('welcome')
-  const [selectedMood, setSelectedMood] = useState<string | null>(null)
+type Practice = {
+  id: string
+  title: string
+  description: string
+  duration: number
+  category: 'meditation' | 'breathing' | 'movement' | 'sleep'
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  premium: boolean
+  image_url: string | null
+}
 
-  // Tela 1: Bem-vindo (Design Headspace)
-  if (currentScreen === 'welcome') {
+type CheckIn = {
+  mood: number
+  energy: number
+  sleep_quality: number
+  notes: string
+}
+
+export default function ZenoraApp() {
+  const [currentView, setCurrentView] = useState<'welcome' | 'checkin' | 'home' | 'library' | 'practice' | 'premium'>('welcome')
+  const [practices, setPractices] = useState<Practice[]>([])
+  const [selectedPractice, setSelectedPractice] = useState<Practice | null>(null)
+  const [checkInData, setCheckInData] = useState<CheckIn>({
+    mood: 3,
+    energy: 3,
+    sleep_quality: 3,
+    notes: ''
+  })
+  const [userName, setUserName] = useState('')
+  const [userEmail, setUserEmail] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    loadPractices()
+  }, [])
+
+  const loadPractices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('practices')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      setPractices(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar práticas:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleWelcomeSubmit = async () => {
+    if (!userName || !userEmail) return
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .insert([{ name: userName, email: userEmail }])
+      
+      if (error) throw error
+      setCurrentView('checkin')
+    } catch (error) {
+      console.error('Erro ao criar usuário:', error)
+    }
+  }
+
+  const handleCheckInSubmit = async () => {
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', userEmail)
+        .single()
+
+      if (userData) {
+        await supabase
+          .from('check_ins')
+          .insert([{
+            user_id: userData.id,
+            ...checkInData
+          }])
+      }
+      
+      setCurrentView('home')
+    } catch (error) {
+      console.error('Erro ao salvar check-in:', error)
+    }
+  }
+
+  const handlePracticeComplete = async (practiceId: string, duration: number) => {
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', userEmail)
+        .single()
+
+      if (userData) {
+        await supabase
+          .from('user_progress')
+          .insert([{
+            user_id: userData.id,
+            practice_id: practiceId,
+            duration_completed: duration
+          }])
+      }
+      
+      setCurrentView('home')
+    } catch (error) {
+      console.error('Erro ao salvar progresso:', error)
+    }
+  }
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'meditation': return <Sparkles className="w-5 h-5" />
+      case 'breathing': return <Wind className="w-5 h-5" />
+      case 'movement': return <TrendingUp className="w-5 h-5" />
+      case 'sleep': return <Moon className="w-5 h-5" />
+      default: return <Heart className="w-5 h-5" />
+    }
+  }
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'beginner': return 'bg-green-500'
+      case 'intermediate': return 'bg-yellow-500'
+      case 'advanced': return 'bg-red-500'
+      default: return 'bg-gray-500'
+    }
+  }
+
+  if (currentView === 'welcome') {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          {/* Card Principal */}
-          <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6">
-            {/* Logo SVG do Zenora */}
-            <div className="flex justify-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#4CB09A] to-[#F7D97E] flex items-center justify-center shadow-lg">
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Flor de Lótus Estilizada */}
-                  <path d="M24 8C24 8 20 12 20 16C20 18.2091 21.7909 20 24 20C26.2091 20 28 18.2091 28 16C28 12 24 8 24 8Z" fill="white"/>
-                  <path d="M16 16C16 16 12 20 12 24C12 26.2091 13.7909 28 16 28C18.2091 28 20 26.2091 20 24C20 20 16 16 16 16Z" fill="white"/>
-                  <path d="M32 16C32 16 36 20 36 24C36 26.2091 34.2091 28 32 28C29.7909 28 28 26.2091 28 24C28 20 32 16 32 16Z" fill="white"/>
-                  <path d="M20 24C20 24 16 28 16 32C16 34.2091 17.7909 36 20 36C22.2091 36 24 34.2091 24 32C24 28 20 24 20 24Z" fill="white"/>
-                  <path d="M28 24C28 24 32 28 32 32C32 34.2091 30.2091 36 28 36C25.7909 36 24 34.2091 24 32C24 28 28 24 28 24Z" fill="white"/>
-                  <circle cx="24" cy="24" r="4" fill="white"/>
-                </svg>
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 space-y-6">
+          <div className="text-center space-y-3">
+            <div className="w-20 h-20 bg-gradient-to-br from-teal-400 to-blue-500 rounded-full mx-auto flex items-center justify-center">
+              <Sparkles className="w-10 h-10 text-white" />
             </div>
-
-            {/* Título e Descrição */}
-            <div className="text-center space-y-2">
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">ZENORA</h1>
-              <p className="text-gray-600 italic text-sm">Respire. Você está em um lugar de calma.</p>
-            </div>
-
-            {/* Botões */}
-            <div className="space-y-3 pt-4">
-              <button 
-                onClick={() => setCurrentScreen('checkin')}
-                className="w-full bg-[#4CB09A] text-white py-4 rounded-full font-semibold text-base hover:bg-[#3A9B87] transition-all duration-300 shadow-md hover:shadow-lg"
-              >
-                Entrar
-              </button>
-              <button 
-                onClick={() => setCurrentScreen('checkin')}
-                className="w-full bg-white text-[#4CB09A] py-4 rounded-full font-semibold text-base border-2 border-[#4CB09A] hover:bg-[#4CB09A]/5 transition-all duration-300"
-              >
-                Criar Conta
-              </button>
-            </div>
-
-            {/* Seletor de Idioma */}
-            <div className="flex items-center justify-center gap-2 pt-4 text-gray-600">
-              <Globe className="w-5 h-5" />
-              <span className="text-sm font-medium">🇧🇷 Português</span>
-            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent">
+              Zenora
+            </h1>
+            <p className="text-gray-600 text-lg">Luz Interior, Essência Tranquila</p>
           </div>
 
-          {/* Texto inferior */}
-          <p className="text-center text-gray-500 text-xs mt-6">
-            Ao continuar, você concorda com nossos Termos de Uso e Política de Privacidade
-          </p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Seu Nome</label>
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 focus:outline-none transition-all"
+                placeholder="Como você gostaria de ser chamado?"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Seu Email</label>
+              <input
+                type="email"
+                value={userEmail}
+                onChange={(e) => setUserEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 focus:outline-none transition-all"
+                placeholder="seu@email.com"
+              />
+            </div>
+
+            <button
+              onClick={handleWelcomeSubmit}
+              disabled={!userName || !userEmail}
+              className="w-full bg-gradient-to-r from-teal-500 to-blue-500 text-white py-4 rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Começar Jornada
+            </button>
+          </div>
         </div>
       </div>
     )
   }
 
-  // Tela 2: Check-in Diário
-  if (currentScreen === 'checkin') {
-    const moods = [
-      { emoji: '😊', label: 'Feliz', value: 'happy' },
-      { emoji: '😐', label: 'Neutro', value: 'neutral' },
-      { emoji: '😰', label: 'Ansioso', value: 'anxious' },
-      { emoji: '😴', label: 'Cansado', value: 'tired' },
-      { emoji: '😢', label: 'Triste', value: 'sad' },
-    ]
-
+  if (currentView === 'checkin') {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-[#4CB09A] to-[#F7D97E] p-6 pb-12">
-          <h2 className="text-2xl font-bold text-white text-center">Como você se sente hoje?</h2>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50 p-4">
+        <div className="max-w-2xl mx-auto pt-8 space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl font-bold text-gray-800">Check-in Diário</h2>
+            <p className="text-gray-600">Como você está se sentindo hoje, {userName}?</p>
+          </div>
 
-        {/* Mood Selection */}
-        <div className="flex-1 p-6 -mt-6">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6">
-            <div className="grid grid-cols-3 gap-4 sm:grid-cols-5">
-              {moods.map((mood) => (
-                <button
-                  key={mood.value}
-                  onClick={() => setSelectedMood(mood.value)}
-                  className={`flex flex-col items-center gap-3 p-4 rounded-2xl transition-all duration-300 ${
-                    selectedMood === mood.value
-                      ? 'bg-[#4CB09A] scale-110 shadow-lg'
-                      : 'bg-gray-50 hover:bg-gray-100 hover:scale-105'
-                  }`}
-                >
-                  <span className="text-4xl">{mood.emoji}</span>
-                  <span className={`text-sm font-medium ${
-                    selectedMood === mood.value ? 'text-white' : 'text-gray-700'
-                  }`}>
-                    {mood.label}
-                  </span>
-                </button>
-              ))}
+          <div className="bg-white rounded-3xl shadow-xl p-6 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Humor (1-5)</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => setCheckInData({ ...checkInData, mood: value })}
+                      className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+                        checkInData.mood === value
+                          ? 'bg-gradient-to-r from-teal-500 to-blue-500 text-white shadow-lg scale-105'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Energia (1-5)</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => setCheckInData({ ...checkInData, energy: value })}
+                      className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+                        checkInData.energy === value
+                          ? 'bg-gradient-to-r from-teal-500 to-blue-500 text-white shadow-lg scale-105'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Qualidade do Sono (1-5)</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => setCheckInData({ ...checkInData, sleep_quality: value })}
+                      className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+                        checkInData.sleep_quality === value
+                          ? 'bg-gradient-to-r from-teal-500 to-blue-500 text-white shadow-lg scale-105'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Notas (opcional)</label>
+                <textarea
+                  value={checkInData.notes}
+                  onChange={(e) => setCheckInData({ ...checkInData, notes: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 focus:outline-none transition-all resize-none"
+                  rows={3}
+                  placeholder="Como você está se sentindo? O que está em sua mente?"
+                />
+              </div>
             </div>
 
-            {selectedMood && (
-              <div className="pt-6 space-y-4 animate-fadeIn">
-                <div className="bg-[#4CB09A]/10 border border-[#4CB09A]/20 rounded-2xl p-6">
-                  <p className="text-[#4CB09A] font-semibold mb-2">✨ Recomendação da IA Zen</p>
-                  <p className="text-gray-700">
-                    {selectedMood === 'anxious' && 'Pratique a respiração 4-7-8 por 3 minutos para acalmar sua mente.'}
-                    {selectedMood === 'tired' && 'Uma meditação de 5 minutos vai renovar sua energia.'}
-                    {selectedMood === 'sad' && 'Sons de cura emocional podem te ajudar agora.'}
-                    {selectedMood === 'happy' && 'Que tal uma prática de gratidão para amplificar essa energia?'}
-                    {selectedMood === 'neutral' && 'Comece com uma meditação guiada de 2 minutos.'}
-                  </p>
+            <button
+              onClick={handleCheckInSubmit}
+              className="w-full bg-gradient-to-r from-teal-500 to-blue-500 text-white py-4 rounded-xl font-semibold hover:shadow-lg transition-all"
+            >
+              Salvar Check-in
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentView === 'practice' && selectedPractice) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50 p-4">
+        <div className="max-w-2xl mx-auto pt-8 space-y-6">
+          <button
+            onClick={() => setCurrentView('library')}
+            className="text-teal-600 hover:text-teal-700 font-medium"
+          >
+            ← Voltar
+          </button>
+
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+            {selectedPractice.image_url && (
+              <img
+                src={selectedPractice.image_url}
+                alt={selectedPractice.title}
+                className="w-full h-64 object-cover"
+              />
+            )}
+
+            <div className="p-8 space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-br from-teal-400 to-blue-500 rounded-xl text-white">
+                    {getCategoryIcon(selectedPractice.category)}
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-800">{selectedPractice.title}</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${getDifficultyColor(selectedPractice.difficulty)}`}>
+                        {selectedPractice.difficulty}
+                      </span>
+                      <span className="text-gray-600">{selectedPractice.duration} min</span>
+                      {selectedPractice.premium && (
+                        <span className="flex items-center gap-1 text-yellow-600">
+                          <Lock className="w-3 h-3" />
+                          <span className="text-xs font-semibold">Premium</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => setCurrentScreen('home')}
-                  className="w-full bg-gradient-to-r from-[#4CB09A] to-[#F7D97E] text-white py-4 rounded-full font-semibold text-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                >
-                  Continuar para o App
-                </button>
+                <p className="text-gray-600 text-lg leading-relaxed">{selectedPractice.description}</p>
               </div>
-            )}
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => handlePracticeComplete(selectedPractice.id, selectedPractice.duration)}
+                  disabled={selectedPractice.premium}
+                  className="w-full bg-gradient-to-r from-teal-500 to-blue-500 text-white py-4 rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {selectedPractice.premium ? 'Upgrade para Premium' : 'Iniciar Prática'}
+                </button>
+
+                {selectedPractice.premium && (
+                  <button
+                    onClick={() => setCurrentView('premium')}
+                    className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-4 rounded-xl font-semibold hover:shadow-lg transition-all"
+                  >
+                    Ver Planos Premium
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
     )
   }
 
-  // Tela 3: Home
-  if (currentScreen === 'home') {
-    const categories = [
-      {
-        icon: Sparkles,
-        title: 'Meditar',
-        color: 'from-[#4CB09A] to-[#3A9B87]',
-        items: ['Meditações curtas (1–3 min)', 'Séries de 7 dias', 'Sons para foco e paz']
-      },
-      {
-        icon: Moon,
-        title: 'Dormir',
-        color: 'from-[#7B68EE] to-[#9370DB]',
-        items: ['Sons de chuva', 'Histórias calmantes', 'Frequências binaurais']
-      },
-      {
-        icon: Wind,
-        title: 'Respirar',
-        color: 'from-[#F7D97E] to-[#F4C542]',
-        items: ['Respiração 4–7–8', 'Respiração antifragmentação', 'Respiração rápida para foco']
-      },
-      {
-        icon: Heart,
-        title: 'Mover',
-        color: 'from-[#FF6B9D] to-[#FF8FAB]',
-        items: ['Yoga leve', 'Alongamento rápido', 'Treinos de 5 minutos']
-      }
-    ]
-
+  if (currentView === 'library') {
     return (
-      <div className="min-h-screen bg-[#FAFAFA]">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-[#4CB09A] to-[#F7D97E] p-6 pb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-white">Olá, Zenora</h1>
-              <p className="text-white/80 mt-1">Sua jornada de paz começa aqui</p>
-            </div>
-            <div className="flex gap-2">
-              <Link href="/progress">
-                <button className="bg-white/20 backdrop-blur-sm p-3 rounded-full hover:bg-white/30 transition-all">
-                  <BarChart3 className="w-6 h-6 text-white" />
-                </button>
-              </Link>
-              <Link href="/settings">
-                <button className="bg-white/20 backdrop-blur-sm p-3 rounded-full hover:bg-white/30 transition-all">
-                  <Settings className="w-6 h-6 text-white" />
-                </button>
-              </Link>
-              <button 
-                onClick={() => setCurrentScreen('premium')}
-                className="bg-white/20 backdrop-blur-sm p-3 rounded-full hover:bg-white/30 transition-all"
-              >
-                <Crown className="w-6 h-6 text-white" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="p-6 -mt-4 space-y-6 pb-24">
-          {/* Daily Practice Card */}
-          <div className="bg-gradient-to-br from-[#4CB09A] to-[#F7D97E] rounded-3xl p-6 text-white shadow-xl">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-white/80 text-sm font-medium">PRÁTICA DO DIA</p>
-                <h3 className="text-2xl font-bold mt-1">Meditação de 1 Minuto</h3>
-              </div>
-              <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full">
-                <Play className="w-6 h-6" />
-              </div>
-            </div>
-            <p className="text-white/90 mb-4">
-              "Feche os olhos… Respire fundo… Um minuto é o suficiente para recomeçar."
-            </p>
-            <button className="bg-white text-[#4CB09A] px-6 py-3 rounded-full font-semibold hover:bg-white/90 transition-all hover:scale-105">
-              Começar Agora
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50 p-4">
+        <div className="max-w-6xl mx-auto pt-8 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-3xl font-bold text-gray-800">Biblioteca de Práticas</h2>
+            <button
+              onClick={() => setCurrentView('home')}
+              className="text-teal-600 hover:text-teal-700 font-medium"
+            >
+              ← Voltar
             </button>
           </div>
 
-          {/* Categories Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {categories.map((category, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
-              >
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-4`}>
-                  <category.icon className="w-7 h-7 text-white" />
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full mx-auto"></div>
+              <p className="text-gray-600 mt-4">Carregando práticas...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {practices.map((practice) => (
+                <div
+                  key={practice.id}
+                  onClick={() => {
+                    setSelectedPractice(practice)
+                    setCurrentView('practice')
+                  }}
+                  className="bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer hover:shadow-2xl transition-all hover:scale-105"
+                >
+                  {practice.image_url && (
+                    <img
+                      src={practice.image_url}
+                      alt={practice.title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  
+                  <div className="p-6 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-gradient-to-br from-teal-400 to-blue-500 rounded-lg text-white">
+                          {getCategoryIcon(practice.category)}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-800">{practice.title}</h3>
+                          <p className="text-sm text-gray-600">{practice.duration} min</p>
+                        </div>
+                      </div>
+                      {practice.premium && (
+                        <Lock className="w-5 h-5 text-yellow-600" />
+                      )}
+                    </div>
+
+                    <p className="text-gray-600 text-sm line-clamp-2">{practice.description}</p>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${getDifficultyColor(practice.difficulty)}`}>
+                        {practice.difficulty}
+                      </span>
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                        {practice.category}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3">{category.title}</h3>
-                <ul className="space-y-2">
-                  {category.items.map((item, i) => (
-                    <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                      <span className="text-[#4CB09A] mt-1">•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (currentView === 'premium') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-orange-50 p-4">
+        <div className="max-w-4xl mx-auto pt-8 space-y-8">
+          <button
+            onClick={() => setCurrentView('home')}
+            className="text-teal-600 hover:text-teal-700 font-medium"
+          >
+            ← Voltar
+          </button>
+
+          <div className="text-center space-y-3">
+            <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full mx-auto flex items-center justify-center">
+              <Award className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+              Zenora Premium
+            </h2>
+            <p className="text-gray-600 text-lg">Desbloqueie todo o potencial da sua jornada</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-3xl shadow-xl p-8 space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-gray-800">Plano Gratuito</h3>
+                <p className="text-4xl font-bold text-gray-800">R$ 0<span className="text-lg text-gray-600">/mês</span></p>
+              </div>
+
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3 text-gray-700">
+                  <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center">
+                    <span className="text-teal-600 text-xs">✓</span>
+                  </div>
+                  Check-in diário ilimitado
+                </li>
+                <li className="flex items-center gap-3 text-gray-700">
+                  <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center">
+                    <span className="text-teal-600 text-xs">✓</span>
+                  </div>
+                  Práticas básicas de meditação
+                </li>
+                <li className="flex items-center gap-3 text-gray-700">
+                  <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center">
+                    <span className="text-teal-600 text-xs">✓</span>
+                  </div>
+                  Exercícios de respiração
+                </li>
+              </ul>
+
+              <button className="w-full bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold">
+                Plano Atual
+              </button>
+            </div>
+
+            <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-3xl shadow-2xl p-8 space-y-6 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+
+              <div className="space-y-2 relative z-10">
+                <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-semibold">
+                  Mais Popular
+                </div>
+                <h3 className="text-2xl font-bold">Plano Premium</h3>
+                <p className="text-4xl font-bold">R$ 29,90<span className="text-lg opacity-90">/mês</span></p>
+              </div>
+
+              <ul className="space-y-3 relative z-10">
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                    <span className="text-orange-500 text-xs">✓</span>
+                  </div>
+                  Tudo do plano gratuito
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                    <span className="text-orange-500 text-xs">✓</span>
+                  </div>
+                  Meditações guiadas avançadas
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                    <span className="text-orange-500 text-xs">✓</span>
+                  </div>
+                  Sons para sono profundo
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                    <span className="text-orange-500 text-xs">✓</span>
+                  </div>
+                  Práticas exclusivas de yoga
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                    <span className="text-orange-500 text-xs">✓</span>
+                  </div>
+                  Relatórios de progresso detalhados
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                    <span className="text-orange-500 text-xs">✓</span>
+                  </div>
+                  Suporte prioritário
+                </li>
+              </ul>
+
+              <button className="w-full bg-white text-orange-600 py-4 rounded-xl font-semibold hover:shadow-lg transition-all relative z-10">
+                Começar Teste Grátis de 7 Dias
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50">
+      <div className="max-w-6xl mx-auto p-4 pt-8 space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent">
+            Olá, {userName}!
+          </h1>
+          <p className="text-gray-600">Bem-vindo de volta à sua jornada de bem-estar</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <Heart className="w-8 h-8 text-pink-500" />
+              <span className="text-2xl font-bold text-gray-800">{checkInData.mood}/5</span>
+            </div>
+            <p className="text-gray-600 font-medium">Humor Atual</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <TrendingUp className="w-8 h-8 text-green-500" />
+              <span className="text-2xl font-bold text-gray-800">{checkInData.energy}/5</span>
+            </div>
+            <p className="text-gray-600 font-medium">Nível de Energia</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <Moon className="w-8 h-8 text-blue-500" />
+              <span className="text-2xl font-bold text-gray-800">{checkInData.sleep_quality}/5</span>
+            </div>
+            <p className="text-gray-600 font-medium">Qualidade do Sono</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl shadow-lg p-6 space-y-3 text-white cursor-pointer hover:shadow-xl transition-all" onClick={() => setCurrentView('premium')}>
+            <div className="flex items-center justify-between">
+              <Award className="w-8 h-8" />
+              <Lock className="w-6 h-6" />
+            </div>
+            <p className="font-bold">Upgrade Premium</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <button
+            onClick={() => setCurrentView('checkin')}
+            className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-all group"
+          >
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-teal-400 to-blue-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Heart className="w-8 h-8 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-xl font-bold text-gray-800">Check-in Diário</h3>
+                <p className="text-gray-600 mt-2">Registre como você está se sentindo hoje</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setCurrentView('library')}
+            className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-all group"
+          >
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Sparkles className="w-8 h-8 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-xl font-bold text-gray-800">Biblioteca</h3>
+                <p className="text-gray-600 mt-2">Explore práticas de meditação e bem-estar</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setCurrentView('premium')}
+            className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl shadow-lg p-8 hover:shadow-xl transition-all group text-white"
+          >
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Award className="w-8 h-8 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-xl font-bold">Premium</h3>
+                <p className="opacity-90 mt-2">Desbloqueie conteúdo exclusivo</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div className="bg-white rounded-3xl shadow-xl p-8 space-y-6">
+          <h2 className="text-2xl font-bold text-gray-800">Práticas Recomendadas</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {practices.slice(0, 3).map((practice) => (
+              <div
+                key={practice.id}
+                onClick={() => {
+                  setSelectedPractice(practice)
+                  setCurrentView('practice')
+                }}
+                className="bg-gradient-to-br from-teal-50 to-blue-50 rounded-2xl p-6 cursor-pointer hover:shadow-lg transition-all hover:scale-105 space-y-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-br from-teal-400 to-blue-500 rounded-xl text-white">
+                    {getCategoryIcon(practice.category)}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-800">{practice.title}</h3>
+                    <p className="text-sm text-gray-600">{practice.duration} min</p>
+                  </div>
+                  {practice.premium && <Lock className="w-5 h-5 text-yellow-600" />}
+                </div>
+                <p className="text-gray-600 text-sm line-clamp-2">{practice.description}</p>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-around max-w-md mx-auto">
-            <button className="flex flex-col items-center gap-1 text-[#4CB09A]">
-              <Sparkles className="w-6 h-6" />
-              <span className="text-xs font-medium">Início</span>
-            </button>
-            <button 
-              onClick={() => setCurrentScreen('workout')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Dumbbell className="w-6 h-6" />
-              <span className="text-xs font-medium">Treinos</span>
-            </button>
-            <button 
-              onClick={() => setCurrentScreen('library')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Library className="w-6 h-6" />
-              <span className="text-xs font-medium">Biblioteca</span>
-            </button>
-            <button 
-              onClick={() => setCurrentScreen('premium')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Crown className="w-6 h-6" />
-              <span className="text-xs font-medium">Premium</span>
-            </button>
-          </div>
-        </div>
       </div>
-    )
-  }
-
-  // Tela 4: Biblioteca
-  if (currentScreen === 'library') {
-    const libraryCategories = [
-      { name: 'Ansiedade', count: 24, color: 'bg-[#4CB09A]' },
-      { name: 'Sono', count: 18, color: 'bg-[#7B68EE]' },
-      { name: 'Foco', count: 15, color: 'bg-[#F7D97E]' },
-      { name: 'Cura emocional', count: 21, color: 'bg-[#FF6B9D]' },
-      { name: 'Energia', count: 12, color: 'bg-[#FF9500]' },
-      { name: 'Espiritualidade', count: 16, color: 'bg-[#9370DB]' },
-      { name: 'Crianças', count: 10, color: 'bg-[#4CB09A]' },
-    ]
-
-    return (
-      <div className="min-h-screen bg-[#FAFAFA] pb-24">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-[#4CB09A] to-[#F7D97E] p-6 pb-8">
-          <h1 className="text-3xl font-bold text-white">Biblioteca</h1>
-          <p className="text-white/80 mt-1">Explore práticas por categoria</p>
-        </div>
-
-        {/* Categories */}
-        <div className="p-6 -mt-4 space-y-3">
-          {libraryCategories.map((category, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer flex items-center justify-between"
-            >
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 ${category.color} rounded-xl flex items-center justify-center`}>
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800">{category.name}</h3>
-                  <p className="text-sm text-gray-500">{category.count} práticas</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </div>
-          ))}
-        </div>
-
-        {/* Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-around max-w-md mx-auto">
-            <button 
-              onClick={() => setCurrentScreen('home')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Sparkles className="w-6 h-6" />
-              <span className="text-xs font-medium">Início</span>
-            </button>
-            <button 
-              onClick={() => setCurrentScreen('workout')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Dumbbell className="w-6 h-6" />
-              <span className="text-xs font-medium">Treinos</span>
-            </button>
-            <button className="flex flex-col items-center gap-1 text-[#4CB09A]">
-              <Library className="w-6 h-6" />
-              <span className="text-xs font-medium">Biblioteca</span>
-            </button>
-            <button 
-              onClick={() => setCurrentScreen('premium')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Crown className="w-6 h-6" />
-              <span className="text-xs font-medium">Premium</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Tela 5: Premium
-  if (currentScreen === 'premium') {
-    const premiumFeatures = [
-      'Todas as séries desbloqueadas',
-      'Programas de 21 dias',
-      'Sons premium exclusivos',
-      'IA Zen - rotinas personalizadas',
-      'Download offline',
-      'Yoga avançado',
-      'Sem anúncios',
-      'Acesso antecipado a novos conteúdos'
-    ]
-
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[#4CB09A] to-[#F7D97E] pb-24">
-        {/* Header */}
-        <div className="p-6 pt-12">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 mx-auto bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4">
-              <Crown className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-4xl font-bold text-white mb-2">Zenora Premium</h1>
-            <p className="text-white/90 text-lg">Desbloqueie todo o potencial da sua jornada</p>
-          </div>
-
-          {/* Features */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 mb-6 border border-white/20">
-            <div className="grid grid-cols-1 gap-3">
-              {premiumFeatures.map((feature, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#4CB09A] text-sm">✓</span>
-                  </div>
-                  <span className="text-white font-medium">{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Pricing Cards */}
-          <div className="space-y-4">
-            {/* Annual Plan */}
-            <div className="bg-white rounded-3xl p-6 shadow-2xl border-4 border-[#F7D97E] relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#F7D97E] px-4 py-1 rounded-full">
-                <span className="text-sm font-bold text-gray-800">MAIS POPULAR</span>
-              </div>
-              <div className="text-center mb-4 mt-2">
-                <p className="text-gray-600 text-sm font-medium">ANUAL</p>
-                <div className="flex items-baseline justify-center gap-1 my-2">
-                  <span className="text-5xl font-bold text-gray-800">$4.49</span>
-                  <span className="text-gray-500">/ano</span>
-                </div>
-                <p className="text-[#4CB09A] font-semibold">Economize 62%</p>
-              </div>
-              <button className="w-full bg-gradient-to-r from-[#4CB09A] to-[#F7D97E] text-white py-4 rounded-full font-bold text-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                Começar Agora
-              </button>
-            </div>
-
-            {/* Monthly Plan */}
-            <div className="bg-white rounded-3xl p-6 shadow-xl">
-              <div className="text-center mb-4">
-                <p className="text-gray-600 text-sm font-medium">MENSAL</p>
-                <div className="flex items-baseline justify-center gap-1 my-2">
-                  <span className="text-4xl font-bold text-gray-800">$0.99</span>
-                  <span className="text-gray-500">/mês</span>
-                </div>
-              </div>
-              <button className="w-full bg-gray-100 text-gray-800 py-4 rounded-full font-bold text-lg hover:bg-gray-200 transition-all duration-300">
-                Assinar Mensal
-              </button>
-            </div>
-          </div>
-
-          {/* Programs */}
-          <div className="mt-8">
-            <h3 className="text-white font-bold text-xl mb-4">Programas Especiais</h3>
-            <div className="space-y-3">
-              {[
-                { name: '21 dias para Ansiedade Zero', price: '$2.99' },
-                { name: 'Sono Profundo em 14 dias', price: '$1.99' },
-                { name: 'Equilíbrio com Mantras', price: '$3.99' },
-                { name: 'Reset Mental: 5 min por dia', price: '$1.99' }
-              ].map((program, index) => (
-                <div key={index} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 flex items-center justify-between border border-white/20">
-                  <div className="flex items-center gap-3">
-                    <Lock className="w-5 h-5 text-white" />
-                    <span className="text-white font-medium">{program.name}</span>
-                  </div>
-                  <span className="text-[#F7D97E] font-bold">{program.price}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-around max-w-md mx-auto">
-            <button 
-              onClick={() => setCurrentScreen('home')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Sparkles className="w-6 h-6" />
-              <span className="text-xs font-medium">Início</span>
-            </button>
-            <button 
-              onClick={() => setCurrentScreen('workout')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Dumbbell className="w-6 h-6" />
-              <span className="text-xs font-medium">Treinos</span>
-            </button>
-            <button 
-              onClick={() => setCurrentScreen('library')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Library className="w-6 h-6" />
-              <span className="text-xs font-medium">Biblioteca</span>
-            </button>
-            <button className="flex flex-col items-center gap-1 text-[#4CB09A]">
-              <Crown className="w-6 h-6" />
-              <span className="text-xs font-medium">Premium</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Tela 6: Treinos (Musculação e Calistenia)
-  if (currentScreen === 'workout') {
-    const workoutPrograms = [
-      {
-        title: 'Corpo Perfeito - 30 Dias',
-        type: 'Programa Completo',
-        duration: '30 dias',
-        level: 'Intermediário',
-        color: 'from-orange-500 to-red-600',
-        icon: Target,
-        description: 'Transforme seu corpo em 30 dias com treinos progressivos'
-      },
-      {
-        title: 'Calistenia Iniciante',
-        type: 'Peso Corporal',
-        duration: '4 semanas',
-        level: 'Iniciante',
-        color: 'from-blue-500 to-cyan-600',
-        icon: Zap,
-        description: 'Domine os fundamentos da calistenia'
-      },
-      {
-        title: 'Hipertrofia Avançada',
-        type: 'Musculação',
-        duration: '12 semanas',
-        level: 'Avançado',
-        color: 'from-purple-600 to-pink-600',
-        icon: TrendingUp,
-        description: 'Maximize seus ganhos de massa muscular'
-      }
-    ]
-
-    const quickWorkouts = [
-      { name: 'Push-ups Challenge', duration: '5 min', calories: '50 kcal', type: 'Calistenia' },
-      { name: 'Treino de Peito', duration: '20 min', calories: '180 kcal', type: 'Musculação' },
-      { name: 'Core Killer', duration: '10 min', calories: '90 kcal', type: 'Calistenia' },
-      { name: 'Pernas Completo', duration: '30 min', calories: '250 kcal', type: 'Musculação' },
-      { name: 'Pull-ups Progressão', duration: '15 min', calories: '120 kcal', type: 'Calistenia' },
-      { name: 'Braços Definidos', duration: '18 min', calories: '140 kcal', type: 'Musculação' }
-    ]
-
-    return (
-      <div className="min-h-screen bg-[#FAFAFA] pb-24">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-600 p-6 pb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-white">Treinos</h1>
-              <p className="text-white/90 mt-1">Alcance o corpo perfeito</p>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full">
-              <Dumbbell className="w-6 h-6 text-white" />
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mt-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-              <div className="text-white/80 text-xs font-medium mb-1">SEQUÊNCIA</div>
-              <div className="text-white text-2xl font-bold">7 dias</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-              <div className="text-white/80 text-xs font-medium mb-1">TREINOS</div>
-              <div className="text-white text-2xl font-bold">24</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-              <div className="text-white/80 text-xs font-medium mb-1">CALORIAS</div>
-              <div className="text-white text-2xl font-bold">3.2k</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="p-6 -mt-4 space-y-6">
-          {/* Featured Programs */}
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Programas em Destaque</h2>
-            <div className="space-y-4">
-              {workoutPrograms.map((program, index) => (
-                <div
-                  key={index}
-                  className="bg-white rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
-                >
-                  <div className={`bg-gradient-to-r ${program.color} p-6 text-white`}>
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="text-white/80 text-xs font-semibold mb-1">{program.type.toUpperCase()}</div>
-                        <h3 className="text-2xl font-bold mb-2">{program.title}</h3>
-                        <p className="text-white/90 text-sm">{program.description}</p>
-                      </div>
-                      <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full">
-                        <program.icon className="w-6 h-6" />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 mt-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        <span className="text-sm font-medium">{program.duration}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Award className="w-4 h-4" />
-                        <span className="text-sm font-medium">{program.level}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4 bg-white">
-                    <button className={`w-full bg-gradient-to-r ${program.color} text-white py-3 rounded-full font-semibold hover:shadow-lg transition-all`}>
-                      Começar Programa
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Workouts */}
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Treinos Rápidos</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {quickWorkouts.map((workout, index) => (
-                <div
-                  key={index}
-                  className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="text-xs font-semibold text-orange-600 mb-1">{workout.type.toUpperCase()}</div>
-                      <h3 className="text-lg font-bold text-gray-800">{workout.name}</h3>
-                    </div>
-                    <div className="bg-gradient-to-br from-orange-500 to-red-600 p-2 rounded-xl">
-                      <Play className="w-5 h-5 text-white" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <span className="font-semibold">{workout.duration}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Zap className="w-4 h-4 text-orange-500" />
-                      <span className="font-semibold">{workout.calories}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Workout Categories */}
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Categorias</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { name: 'Peito', color: 'from-red-500 to-orange-600' },
-                { name: 'Costas', color: 'from-blue-500 to-cyan-600' },
-                { name: 'Pernas', color: 'from-green-500 to-emerald-600' },
-                { name: 'Braços', color: 'from-purple-500 to-pink-600' },
-                { name: 'Ombros', color: 'from-yellow-500 to-orange-500' },
-                { name: 'Core', color: 'from-indigo-500 to-purple-600' }
-              ].map((category, index) => (
-                <div
-                  key={index}
-                  className={`bg-gradient-to-br ${category.color} rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer`}
-                >
-                  <Dumbbell className="w-8 h-8 mb-3" />
-                  <h3 className="text-lg font-bold">{category.name}</h3>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-around max-w-md mx-auto">
-            <button 
-              onClick={() => setCurrentScreen('home')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Sparkles className="w-6 h-6" />
-              <span className="text-xs font-medium">Início</span>
-            </button>
-            <button className="flex flex-col items-center gap-1 text-orange-600">
-              <Dumbbell className="w-6 h-6" />
-              <span className="text-xs font-medium">Treinos</span>
-            </button>
-            <button 
-              onClick={() => setCurrentScreen('library')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Library className="w-6 h-6" />
-              <span className="text-xs font-medium">Biblioteca</span>
-            </button>
-            <button 
-              onClick={() => setCurrentScreen('premium')}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-[#4CB09A] transition-colors"
-            >
-              <Crown className="w-6 h-6" />
-              <span className="text-xs font-medium">Premium</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return null
+    </div>
+  )
 }
