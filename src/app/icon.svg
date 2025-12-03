@@ -1,0 +1,22 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Flor de Lótus Estilizada - Logo Zenora -->
+  <rect width="64" height="64" rx="16" fill="url(#gradient)"/>
+  
+  <!-- Pétalas da Flor de Lótus -->
+  <path d="M32 12C32 12 26 18 26 24C26 27.3137 28.6863 30 32 30C35.3137 30 38 27.3137 38 24C38 18 32 12 32 12Z" fill="white" opacity="0.9"/>
+  <path d="M20 24C20 24 14 30 14 36C14 39.3137 16.6863 42 20 42C23.3137 42 26 39.3137 26 36C26 30 20 24 20 24Z" fill="white" opacity="0.9"/>
+  <path d="M44 24C44 24 50 30 50 36C50 39.3137 47.3137 42 44 42C40.6863 42 38 39.3137 38 36C38 30 44 24 44 24Z" fill="white" opacity="0.9"/>
+  <path d="M26 36C26 36 20 42 20 48C20 51.3137 22.6863 54 26 54C29.3137 54 32 51.3137 32 48C32 42 26 36 26 36Z" fill="white" opacity="0.9"/>
+  <path d="M38 36C38 36 44 42 44 48C44 51.3137 41.3137 54 38 54C34.6863 54 32 51.3137 32 48C32 42 38 36 38 36Z" fill="white" opacity="0.9"/>
+  
+  <!-- Centro da Flor -->
+  <circle cx="32" cy="32" r="6" fill="white"/>
+  
+  <!-- Gradiente -->
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4CB09A"/>
+      <stop offset="100%" stop-color="#F7D97E"/>
+    </linearGradient>
+  </defs>
+</svg>
