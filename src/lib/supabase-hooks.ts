@@ -1,13 +1,75 @@
 import { supabase } from './supabase'
-import type { 
-  MoodCheckIn, 
-  MeditationSession, 
-  WorkoutSession, 
-  UserProgress, 
-  Achievement, 
-  Reminder, 
-  Feedback 
-} from './supabase'
+
+// Definir tipos localmente
+export type MoodCheckIn = {
+  id: string
+  user_id: string
+  mood: 'great' | 'good' | 'okay' | 'bad' | 'terrible'
+  date: string
+  created_at?: string
+}
+
+export type MeditationSession = {
+  id: string
+  user_id: string
+  duration: number
+  type: string
+  completed: boolean
+  date: string
+  created_at?: string
+}
+
+export type WorkoutSession = {
+  id: string
+  user_id: string
+  type: string
+  duration: number
+  calories: number
+  completed: boolean
+  date: string
+  created_at?: string
+}
+
+export type UserProgress = {
+  id: string
+  user_id: string
+  total_sessions: number
+  total_minutes: number
+  current_streak: number
+  longest_streak: number
+  total_workouts: number
+  total_calories: number
+  updated_at?: string
+  created_at?: string
+}
+
+export type Achievement = {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  icon: string
+  unlocked_at?: string
+}
+
+export type Reminder = {
+  id: string
+  user_id: string
+  title: string
+  time: string
+  enabled: boolean
+  days: string[]
+  created_at?: string
+}
+
+export type Feedback = {
+  id: string
+  user_id: string
+  type: 'bug' | 'feature' | 'improvement' | 'other'
+  message: string
+  status: 'pending' | 'reviewed' | 'resolved'
+  created_at?: string
+}
 
 // ==================== MOOD CHECK-INS ====================
 

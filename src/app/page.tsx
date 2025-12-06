@@ -43,47 +43,53 @@ export default function ZenoraApp() {
   }, [])
 
   const checkSupabaseConnection = () => {
-    const hasUrl = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL
-    const hasKey = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    setSupabaseConnected(!!(hasUrl && hasKey))
+    try {
+      // Verificar se as variáveis de ambiente estão disponíveis
+      const hasUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+      setSupabaseConnected(hasUrl)
+    } catch (error) {
+      console.error('Erro ao verificar conexão Supabase:', error)
+      setSupabaseConnected(false)
+    }
   }
 
   const loadPractices = async () => {
+    // Práticas de exemplo (fallback)
+    const examplePractices: Practice[] = [
+      {
+        id: '1',
+        title: 'Respiração Consciente',
+        description: 'Uma prática simples de respiração para acalmar a mente',
+        duration: 5,
+        category: 'breathing',
+        difficulty: 'beginner',
+        premium: false,
+        image_url: null
+      },
+      {
+        id: '2',
+        title: 'Meditação Guiada',
+        description: 'Meditação para iniciantes com foco na atenção plena',
+        duration: 10,
+        category: 'meditation',
+        difficulty: 'beginner',
+        premium: false,
+        image_url: null
+      },
+      {
+        id: '3',
+        title: 'Yoga Matinal',
+        description: 'Sequência de yoga para começar o dia com energia',
+        duration: 15,
+        category: 'movement',
+        difficulty: 'intermediate',
+        premium: true,
+        image_url: null
+      }
+    ]
+
     if (!supabaseConnected) {
-      // Práticas de exemplo quando Supabase não está conectado
-      setPractices([
-        {
-          id: '1',
-          title: 'Respiração Consciente',
-          description: 'Uma prática simples de respiração para acalmar a mente',
-          duration: 5,
-          category: 'breathing',
-          difficulty: 'beginner',
-          premium: false,
-          image_url: null
-        },
-        {
-          id: '2',
-          title: 'Meditação Guiada',
-          description: 'Meditação para iniciantes com foco na atenção plena',
-          duration: 10,
-          category: 'meditation',
-          difficulty: 'beginner',
-          premium: false,
-          image_url: null
-        },
-        {
-          id: '3',
-          title: 'Yoga Matinal',
-          description: 'Sequência de yoga para começar o dia com energia',
-          duration: 15,
-          category: 'movement',
-          difficulty: 'intermediate',
-          premium: true,
-          image_url: null
-        }
-      ])
-      setIsLoading(false)
+      setPractices(examplePractices)
       return
     }
 
@@ -95,22 +101,10 @@ export default function ZenoraApp() {
         .order('created_at', { ascending: false })
       
       if (error) throw error
-      setPractices(data || [])
+      setPractices(data && data.length > 0 ? data : examplePractices)
     } catch (error) {
       console.error('Erro ao carregar práticas:', error)
-      // Fallback para práticas de exemplo
-      setPractices([
-        {
-          id: '1',
-          title: 'Respiração Consciente',
-          description: 'Uma prática simples de respiração para acalmar a mente',
-          duration: 5,
-          category: 'breathing',
-          difficulty: 'beginner',
-          premium: false,
-          image_url: null
-        }
-      ])
+      setPractices(examplePractices)
     } finally {
       setIsLoading(false)
     }
